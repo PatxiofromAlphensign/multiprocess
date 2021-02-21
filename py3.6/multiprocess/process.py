@@ -72,7 +72,6 @@ class BaseProcess(object):
             self._popen = p
             self.stdout, _  = p.communicate()
         
-        raise NotImplementedError
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={},
                  *, daemon=None):
@@ -82,9 +81,11 @@ class BaseProcess(object):
         self._config = _current_process._config.copy()
         self._parent_pid = os.getpid()
         self._popen = None
+        self._children = set()
         self._target = target
         *self._args, = args
         self._kwargs = dict(kwargs)
+        self._start_method = None
         self._name = name or type(self).__name__ + '-' + \
                      ':'.join(str(i) for i in self._identity)
         if daemon is not None:
@@ -115,7 +116,7 @@ class BaseProcess(object):
         # reference to the process object (see bpo-30775)
         del self._target, self._args, self._kwargs
 
-        #_children.add(self)
+        self._children.add(self)
 
     def terminate(self):
         '''
@@ -242,18 +243,29 @@ class BaseProcess(object):
 
     ##
 
-    def _bootstrap(self):
+    def instanize(self):
+
         from . import util, context
         global _current_process, _process_counter, _children
+        assert self._start_method is not None
+        context._force_start_method(self._start_method)
+        _process_counter = itertools.count(1)
+        _children = set()
+        util._close_stdin()
+        old_process = _current_process
+        _current_process = self
 
+    def _bootstrap(self):
         try:
-            if self._start_method is not None:
-                context._force_start_method(self._start_method)
+            #if self._start_method is not None:
+            assert self._start_method is not None
+            context._force_start_method(self._start_method)
             _process_counter = itertools.count(1)
             _children = set()
             util._close_stdin()
             old_process = _current_process
             _current_process = self
+            return old_process
             try:
                 util._finalizer_registry.clear()
                 util._run_after_forkers()

@@ -88,7 +88,7 @@ class BaseProcess(object):
         self._popen = None
         self._closed = False
         self._target = target
-        self._args = tuple(args)
+        *self._args, = args
         self._kwargs = dict(kwargs)
         self._name = name or type(self).__name__ + '-' + \
                      ':'.join(str(i) for i in self._identity)
@@ -118,7 +118,7 @@ class BaseProcess(object):
         assert not _current_process._config.get('daemon'), \
                'daemonic processes are not allowed to have children'
         _cleanup()
-        self._popen = self._Popen(self)
+        self._popen = self._Popen(self._args)
         self._sentinel = self._popen.sentinel
         # Avoid a refcycle if the target function holds an indirect
         # reference to the process object (see bpo-30775)
@@ -138,6 +138,9 @@ class BaseProcess(object):
         '''
         self._check_closed()
         self._popen.kill()
+
+    def __len__(self):
+        return self._parent_pid
 
     def join(self, timeout=None):
         '''

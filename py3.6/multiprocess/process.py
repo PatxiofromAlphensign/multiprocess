@@ -14,6 +14,7 @@ __all__ = ['BaseProcess', 'current_process', 'active_children']
 #
 
 import os
+import unittest
 import sys
 import signal
 import itertools
@@ -65,7 +66,12 @@ class BaseProcess(object):
 
     The class is analogous to `threading.Thread`
     '''
-    def _Popen(self):
+    def _Popen(self, args):
+        from subprocess  import Popen, PIPE
+        with Popen(list(args), stdout=PIPE, stderr=PIPE) as p:
+            self._popen = p
+            self.stdout, _  = p.communicate()
+        
         raise NotImplementedError
 
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={},
@@ -77,7 +83,7 @@ class BaseProcess(object):
         self._parent_pid = os.getpid()
         self._popen = None
         self._target = target
-        self._args = tuple(args)
+        *self._args, = args
         self._kwargs = dict(kwargs)
         self._name = name or type(self).__name__ + '-' + \
                      ':'.join(str(i) for i in self._identity)
@@ -102,12 +108,14 @@ class BaseProcess(object):
         assert not _current_process._config.get('daemon'), \
                'daemonic processes are not allowed to have children'
         _cleanup()
-        self._popen = self._Popen(self)
-        self._sentinel = self._popen.sentinel
+        self._Popen(self._args)
+        
+        #self._sentinel = self._popen.sentinel
         # Avoid a refcycle if the target function holds an indirect
         # reference to the process object (see bpo-30775)
         del self._target, self._args, self._kwargs
-        _children.add(self)
+
+        #_children.add(self)
 
     def terminate(self):
         '''
@@ -333,3 +341,5 @@ for name, signum in list(signal.__dict__.items()):
 
 # For debug and leak testing
 _dangling = WeakSet()
+if __name__ == "__main__":
+    unittest.main()

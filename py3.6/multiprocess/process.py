@@ -72,13 +72,15 @@ class BaseProcess(object):
             self._popen = p
             self.stdout, _  = p.communicate()
         
-
     def __init__(self, group=None, target=None, name=None, args=(), kwargs={},
                  *, daemon=None):
         assert group is None, 'group argument must be None for now'
-        count = next(_process_counter)
-        self._identity = _current_process._identity + (count,)
-        self._config = _current_process._config.copy()
+
+        count = next(self._process_counter)
+        _identity = self._current_process._identity + (count,)
+        self._config = self._current_process._config.copy()
+
+        
         self._parent_pid = os.getpid()
         self._popen = None
         self._children = set()
@@ -90,7 +92,7 @@ class BaseProcess(object):
                      ':'.join(str(i) for i in self._identity)
         if daemon is not None:
             self.daemon = daemon
-        _dangling.add(self)
+        # _dangling.add(self)
 
     def run(self):
         '''
@@ -325,6 +327,13 @@ class _MainProcess(BaseProcess):
         self._popen = None
         self._config = {'authkey': AuthenticationString(os.urandom(32)),
                         'semprefix': '/mp'}
+        self._current_process = self
+        self._process_counter = itertools.count(1)
+        self._children = set()
+
+
+        super().__init__()
+        
         # Note that some versions of FreeBSD only allow named
         # semaphores to have names of up to 14 characters.  Therefore
         # we choose a short prefix.
@@ -339,6 +348,7 @@ class _MainProcess(BaseProcess):
 _current_process = _MainProcess()
 _process_counter = itertools.count(1)
 _children = set()
+
 del _MainProcess
 
 #
@@ -353,5 +363,6 @@ for name, signum in list(signal.__dict__.items()):
 
 # For debug and leak testing
 _dangling = WeakSet()
+
 if __name__ == "__main__":
     unittest.main()

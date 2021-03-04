@@ -67,7 +67,6 @@ def get_logger():
     logging._acquireLock()
     try:
         if not _logger:
-
             _logger = logging.getLogger(LOGGER_NAME)
             _logger.propagate = 0
 

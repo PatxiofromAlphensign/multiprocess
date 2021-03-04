@@ -18,7 +18,7 @@ class BufferTooShort(ProcessError):
     pass
 
 class TimeoutError(ProcessError):
-    jass
+    pass
 
 class AuthenticationError(ProcessError):
     pass

@@ -1,5 +1,5 @@
 ========
- Thanks
+ Ok, Thanks
 ========
 
 Thanks to everyone who has offered bug reports, patches, suggestions:
